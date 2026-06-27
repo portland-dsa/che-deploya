@@ -12,7 +12,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import AbstractSet, Sequence
+from typing import TYPE_CHECKING, AbstractSet, Sequence
+
+if TYPE_CHECKING:
+    from .spec import Stages
 
 
 class Privilege(StrEnum):
@@ -76,7 +79,7 @@ class Grant:
     privileges: AbstractSet[Privilege]
     on: On
     to: str
-    only: AbstractSet | None = None        # restrict to these Stages; None = the db's stages
+    only: "AbstractSet[Stages] | None" = None        # restrict to these Stages; None = the db's stages
     require_exists: bool = False
 
 

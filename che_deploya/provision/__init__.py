@@ -34,10 +34,10 @@ def read_asset_for(spec: DeploySpec) -> ReadAsset:
     first and the tree second lets both work.
     """
     def read_asset(resource_loc: Optional[str], src: str) -> bytes:
-        if resource_loc is not None:
-            res = resources.files(spec.package).joinpath(resource_loc)
-            if res.is_file():
-                return res.read_bytes()
+        loc = resource_loc if resource_loc is not None else f"assets/{Path(src).name}"
+        res = resources.files(spec.package).joinpath(loc)
+        if res.is_file():
+            return res.read_bytes()
         return Path(src).read_bytes()
 
     return read_asset
@@ -71,7 +71,7 @@ def provision_all(
             print(f"self-destruct: removed {secrets_dir}")
 
 
-def _extract_bundled_secrets(spec: DeploySpec, targets, secrets_dir) -> None:
+def _extract_bundled_secrets(spec: DeploySpec, targets: AbstractSet[Stages], secrets_dir: Path) -> None:
     """Unpack the per-stage ``.enc.yaml`` bundled into this archive into ``secrets_dir``.
 
     Recycled from the original tool: escalate first so the dir is root:root 0700

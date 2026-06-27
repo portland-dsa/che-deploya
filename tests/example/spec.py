@@ -1,7 +1,7 @@
 """A compact two-unit spec for exercising build_cli end to end."""
 from enum import StrEnum
 from che_deploya import (
-    DeploySpec, Component, StaticUnit, TemplatedUnit, Secret, Environment, Stages,
+    DeploySpec, Component, StaticUnit, TemplatedUnit, Secret, Environment,
 )
 
 class SecretTokens(StrEnum):

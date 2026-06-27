@@ -13,6 +13,7 @@ Box-side: escalates to root and drives psql as the postgres superuser.
 from __future__ import annotations
 
 from dataclasses import replace
+from enum import StrEnum
 from pathlib import Path
 from typing import AbstractSet, Optional
 
@@ -71,7 +72,7 @@ def provision_db(
             print(f"ok: {dname}")
 
 
-def _migration_password(spec, component, token, stage, secrets_dir) -> str:
+def _migration_password(spec: DeploySpec, component: Component, token: StrEnum, stage: Stages, secrets_dir: Path) -> str:
     """Decrypt this stage's migration password out of its encrypted file."""
     resolver = secret_file_for(spec, component, secrets_dir)
     for s in ops.SecretsIter([stage], resolver, [token]):

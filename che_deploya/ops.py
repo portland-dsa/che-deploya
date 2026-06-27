@@ -15,7 +15,10 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Callable, Dict, Generic, Iterable, List, Optional, Set, TypeVar
+from typing import TYPE_CHECKING, Callable, Dict, Generic, Iterable, List, Optional, Set, TypeVar
+
+if TYPE_CHECKING:
+    from .spec import Stages
 
 from .model import FilePermissions, FileOwnership, ROOT, Mode
 
@@ -200,7 +203,7 @@ T = TypeVar("T", bound=str)
 @dataclass
 class ExtractedSecret(Generic[T]):
     token_name: T
-    target: Targets
+    target: "Stages"
     value: bytes
 
 
@@ -208,7 +211,7 @@ class SecretsIter(Generic[T]):
     def __init__(
         self,
         target,
-        secrets_file_for: Callable[[Stages], Path],
+        secrets_file_for: "Callable[[Stages], Path]",
         tokens: Iterable[T],
         *,
         exceptions=None,

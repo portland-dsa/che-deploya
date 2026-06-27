@@ -29,3 +29,13 @@ def test_component_stage_not_subset_rejected():
     c = Component(name="bot", stages={Stages.Production})
     with pytest.raises(SpecError, match="subset"):
         validate(_spec([c], stages={Stages.Staging}))
+
+def test_templated_unit_secret_src_without_component_secrets_rejected():
+    c = Component(
+        name="bot",
+        secrets=None,
+        stages={Stages.Staging},
+        units=[TemplatedUnit(src="a", dest="b", env=Environment(names=set()), per_stage=True)],
+    )
+    with pytest.raises(SpecError, match="Secret"):
+        validate(_spec([c]))

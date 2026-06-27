@@ -8,7 +8,7 @@ singleton templated units, and duplicate component names.
 
 from __future__ import annotations
 
-from .spec import DeploySpec, Component, TemplatedUnit
+from .spec import DeploySpec, Component, TemplatedUnit, SecretSource
 from .db import Db, role_names
 
 
@@ -60,6 +60,12 @@ def _check_units(component: Component, active: frozenset) -> None:
                 f"component {component.name!r} has a singleton templated unit "
                 f"({unit.dest!r}) but {len(active)} active stages; a singleton "
                 f"templated unit needs exactly one stage to render with"
+            )
+        if isinstance(unit, TemplatedUnit) and unit.env.src is SecretSource and component.secrets is None:
+            raise SpecError(
+                f"component {component.name!r} has a templated unit {unit.dest!r} "
+                f"whose env reads from the component Secret file, but the component "
+                f"declares no secrets"
             )
 
 
