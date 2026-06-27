@@ -78,24 +78,35 @@ class Environment:
 
 @dataclass(frozen=True)
 class StaticUnit:
-    """A unit file copied into place verbatim."""
+    """A unit file copied into place verbatim.
+
+    ``file_mode`` is the mode of the installed file. ``dir_mode`` is applied to the
+    parent directory only when it has to be created - an existing parent (such as
+    ``/etc/systemd/system`` or ``/usr/local/sbin``) is left exactly as it is.
+    """
 
     src: str
     dest: str
     resource_loc: str | None = None
-    mode: FilePermissions = FilePermissions.WorldConfig
+    file_mode: FilePermissions = FilePermissions.WorldConfig
+    dir_mode: FilePermissions = FilePermissions.WorldDir
     per_stage: bool = False
 
 
 @dataclass(frozen=True)
 class TemplatedUnit:
-    """A unit file rendered from a template, its ``${...}`` filled from ``env``."""
+    """A unit file rendered from a template, its ``${...}`` filled from ``env``.
+
+    ``file_mode`` and ``dir_mode`` behave as on :class:`StaticUnit`: ``file_mode``
+    modes the rendered file, ``dir_mode`` the parent only when it must be created.
+    """
 
     src: str
     dest: str
     env: Environment
     resource_loc: str | None = None
-    mode: FilePermissions = FilePermissions.WorldConfig
+    file_mode: FilePermissions = FilePermissions.WorldConfig
+    dir_mode: FilePermissions = FilePermissions.WorldDir
     per_stage: bool = False
 
 

@@ -28,11 +28,14 @@ class FilePermissions(IntEnum):
     """Named POSIX modes used on the box.
 
     An :class:`IntEnum` so a member *is* an ``int`` - ``path.chmod(FilePermissions.Private)``
-    works directly, and the name documents intent at the call site.
+    works directly, and the name documents intent at the call site. ``PrivateExecFile``
+    shares ``PrivateDir``'s 0o700 bits (it is an alias); both names exist so a call site
+    reads as either a root-only executable or a private directory.
     """
 
     Private = 0o600  # secret files (.cred)
-    PrivateDir = 0o700  # secret dirs, the sbin backup script
+    PrivateDir = 0o700  # secret dirs
+    PrivateExecFile = 0o700  # root-only executable (e.g. the sbin backup script)
     GroupConfig = 0o640  # root writes, the service/postgres group reads
     GroupDir = 0o750  # /etc/botonio-botsci/<component>/<target>
     WorldConfig = 0o644  # world-readable config (the unit files)

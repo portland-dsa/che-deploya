@@ -14,7 +14,6 @@ from string import Template
 from typing import AbstractSet, Callable, Dict
 
 from .. import ops
-from ..model import FilePermissions
 from ..spec import (
     Component,
     DeploySpec,
@@ -70,18 +69,11 @@ def provision_systemd(
                     unit.dest, root=spec.root, component=component.name, stage=stage
                 )
             )
-            ops.install_dir(dest.parent, _dir_mode(unit.mode), keep_existing=True)
-            ops.install_file(data, dest, unit.mode)
+            ops.install_dir(dest.parent, unit.dir_mode, keep_existing=True)
+            ops.install_file(data, dest, unit.file_mode)
             print(f"ok: {dest}")
 
     ops.daemon_reload()
-
-
-def _dir_mode(file_mode: FilePermissions) -> FilePermissions:
-    """The directory mode for a unit's parent (mirrors the original tool)."""
-    if file_mode == FilePermissions.WorldConfig:
-        return FilePermissions.WorldDir
-    return FilePermissions.PrivateDir
 
 
 def _collect_env(
