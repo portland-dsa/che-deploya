@@ -152,9 +152,23 @@ def scp(
     run(["scp", file.name, payload_dir], cwd=file.parent)
 
 
-def install_dir(dest, perms: FilePermissions, owner: FileOwnership = ROOT) -> None:
-    """Ensure directory ``dest`` exists with the given mode and ownership (like ``install -d``)."""
+def install_dir(
+    dest,
+    perms: FilePermissions,
+    owner: FileOwnership = ROOT,
+    *,
+    keep_existing: bool = False,
+) -> None:
+    """Ensure directory ``dest`` exists with the given mode and ownership (like ``install -d``).
+
+    With ``keep_existing``, a directory that is already present is left exactly as it is -
+    its mode and owner are not reset. Use that when installing into a shared system
+    directory (``/usr/local/sbin``) that must keep its own permissions; leave it off to
+    force ``perms``/``owner`` onto the directory on every run.
+    """
     dest = Path(dest)
+    if keep_existing and dest.is_dir():
+        return
     dest.mkdir(mode=perms, parents=True, exist_ok=True)
     dest.chmod(perms)  # mkdir's mode is masked by umask; chmod forces it.
     shutil.chown(dest, user=owner.user, group=owner.group)

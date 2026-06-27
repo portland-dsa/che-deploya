@@ -70,7 +70,7 @@ def provision_systemd(
                     unit.dest, root=spec.root, component=component.name, stage=stage
                 )
             )
-            ops.install_dir(dest.parent, _dir_mode(unit.mode))
+            ops.install_dir(dest.parent, _dir_mode(unit.mode), keep_existing=True)
             ops.install_file(data, dest, unit.mode)
             print(f"ok: {dest}")
 
