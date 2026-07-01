@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "che-deploya"
-version = "0.2.0"
+version = "0.3.0"
 description = "Provisioning and deploy tool from encrypted secrets for the PDX DSA deploy model."
 requires-python = ">=3.11"
 dependencies = ["cyclopts>=3"]
@@ -13,7 +13,10 @@ dependencies = ["cyclopts>=3"]
 packages = ["che_deploya"]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "black>=26.5.1",
+    "pytest>=8",
+]
 
 [tool.pyright]
 # Developed on Windows, targets the Linux box: resolve POSIX-only stdlib for analysis.

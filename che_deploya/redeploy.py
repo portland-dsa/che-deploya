@@ -12,13 +12,15 @@ import shutil
 import sys
 import zipapp
 import zipfile
+from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Optional, Tuple
+from typing import AbstractSet, Annotated, Mapping, Optional, Tuple
 
-from cyclopts import App
+from cyclopts import App, Parameter
 
 from . import ops
+from .selection import all_stages, select_specs
 from .spec import DeploySpec, Stages
 from .templating import resolve
 
@@ -141,33 +143,88 @@ def _bundle_assets(spec: DeploySpec, repo_root: str, dest_pkg: Path) -> None:
                 shutil.copy2(src_path, bundled_secrets / src_path.name)
 
 
-def build_redeploy(spec: DeploySpec) -> App:
+def _remote_command(
+    staging: str,
+    pyz_name: str,
+    targets: AbstractSet[Stages],
+    spec_name: str | None,
+) -> str:
+    """The one-line remote command: provision from the bundled secrets, then wipe.
+
+    `spec_name` is `None` in single-spec mode - the string then carries no
+    `--spec` and is byte-identical to the original. In multi-spec mode it names
+    the one spec this archive was built for. The trailing `rm -rf` and `exit $rc`
+    remove the per-run staging directory and preserve the provision exit code.
+    """
+    targets_flag = " ".join(f"--targets {t.value}" for t in targets)
+    spec_flag = f" --spec {spec_name}" if spec_name is not None else ""
+    return (
+        f'sudo python3 "{staging}/{pyz_name}" provision{spec_flag} '
+        f"--bundled-secrets --self-destruct {targets_flag}"
+        f'; rc=$?; rm -rf -- "{staging}"; exit $rc'
+    )
+
+
+def _ship_one(
+    spec: DeploySpec,
+    spec_name: str | None,
+    host: str,
+    user: Optional[str],
+    targets: frozenset[Stages],
+) -> None:
+    """Bundle one spec, ship it to a fresh remote staging dir, and provision it.
+
+    This is the original `_run` body, lifted verbatim so both the single-spec and
+    multi-spec verbs share it. A multi-spec `redeploy` calls it once per selected
+    spec, so each spec gets its own archive and its own ssh session - one spec's
+    files never travel with another's.
+    """
+    dest = f"{user}@{host}" if user is not None else host
+    pyz, tmp = bundle(spec)
+    try:
+        staging = ops.run(["ssh", dest, "mktemp -d"], capture=True).stdout.strip()
+        ops.scp(pyz, host, user=user, target_dir=staging)
+        remote = _remote_command(staging, pyz.name, targets, spec_name)
+        ops.run(["ssh", "-tt", dest, remote])
+    finally:
+        tmp.cleanup()
+
+
+def build_redeploy(
+    specs: Mapping[str, DeploySpec], SpecName: type[StrEnum] | None
+) -> App:
+    """Build the `redeploy` verb for one or many specs."""
     app = App(
         name="redeploy",
         help="Bundle this tool and its secrets into a .pyz, ship it, and provision over SSH.",
     )
 
-    @app.default
-    def _run(
+    if SpecName is None:
+        only = next(iter(specs.values()))
+
+        @app.default
+        def _run_single(
+            *,
+            host: str,
+            user: Optional[str] = None,
+            targets: frozenset[Stages] = frozenset(only.stages),
+        ) -> None:
+            _ship_one(only, None, host, user, targets)
+
+        return app
+
+    def _run_multi(
         *,
         host: str,
         user: Optional[str] = None,
-        targets: frozenset[Stages] = frozenset(spec.stages),
+        targets: frozenset[Stages] = frozenset(all_stages(specs)),
+        spec,
     ) -> None:
-        # Recycled verbatim from the original _run, with spec-derived names.
-        dest = f"{user}@{host}" if user is not None else host
-        pyz, tmp = bundle(spec)
-        try:
-            stage = ops.run(["ssh", dest, "mktemp -d"], capture=True).stdout.strip()
-            ops.scp(pyz, host, user=user, target_dir=stage)
-            targets_flag = " ".join(f"--targets {t.value}" for t in targets)
-            remote = (
-                f'sudo python3 "{stage}/{pyz.name}" provision '
-                f"--bundled-secrets --self-destruct {targets_flag}"
-                f'; rc=$?; rm -rf -- "{stage}"; exit $rc'
-            )
-            ops.run(["ssh", "-tt", dest, remote])
-        finally:
-            tmp.cleanup()
+        for spec_name, selected in select_specs(specs, spec).items():
+            _ship_one(selected, spec_name, host, user, targets)
 
+    _run_multi.__annotations__["spec"] = Annotated[
+        frozenset[SpecName], Parameter(negative_iterable="")
+    ]
+    app.default(_run_multi)
     return app

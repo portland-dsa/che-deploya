@@ -16,7 +16,8 @@ def _spec() -> DeploySpec:
 
 
 def test_build_redeploy_returns_app():
-    app = build_redeploy(_spec())
+    spec = _spec()
+    app = build_redeploy({spec.root: spec}, None)
     assert isinstance(app, App)
 
 
