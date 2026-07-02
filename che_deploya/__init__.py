@@ -2,12 +2,17 @@
 
 from .cli import build_cli
 from .model import Access, FileOwnership, FilePermissions, Mode, ROOT
+from .provision.systemd import CheckFailed
 from .spec import (
+    Check,
     Component,
     DeploySpec,
     Environment,
+    RestartItem,
     Secret,
     SecretSource,
+    SharedRestart,
+    StageRestart,
     Stages,
     StaticUnit,
     TemplatedUnit,
@@ -25,6 +30,11 @@ __all__ = [
     "StaticUnit",
     "TemplatedUnit",
     "Unit",
+    "Check",
+    "CheckFailed",
+    "StageRestart",
+    "SharedRestart",
+    "RestartItem",
     "FilePermissions",
     "FileOwnership",
     "ROOT",
