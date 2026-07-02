@@ -114,11 +114,68 @@ Unit = Union[StaticUnit, TemplatedUnit]
 
 
 @dataclass(frozen=True)
+class Check:
+    """A validation command run against the staged candidate files, before install.
+
+    ``command`` is an argv sequence whose single placeholder ``{file}`` resolves
+    to the staged path of ``target`` - a ``dest`` the component itself owns. The
+    check runs once, against a tree that already holds every unit of the
+    component, so a config that imports fragments by a relative path validates
+    the same bytes that will serve.
+    """
+
+    command: Sequence[str]
+    target: str
+
+
+@dataclass(frozen=True)
+class StageRestart:
+    """A per-stage service instance to restart, e.g. ``"app@{stage}.service"``.
+
+    ``template`` must contain ``{stage}``; it expands to one restart per target
+    stage. Use it only for genuinely distinct per-stage units - a service shared
+    across stages is a :class:`SharedRestart`.
+    """
+
+    template: str
+
+
+@dataclass(frozen=True)
+class SharedRestart:
+    """A single box-wide service to restart exactly once, e.g. ``"caddy.service"``.
+
+    ``unit`` is literal - no placeholders - because the whole point is that one
+    shared process is cycled once, not once per stage.
+    """
+
+    unit: str
+
+
+RestartItem = StageRestart | SharedRestart
+"""One entry in a component's ``restart`` list: per-stage or shared."""
+
+
+def normalize_restart(
+    restart: RestartItem | Sequence[RestartItem],
+) -> tuple[RestartItem, ...]:
+    """Coerce the single-or-sequence ``restart`` field into a tuple.
+
+    A bare ``StageRestart``/``SharedRestart`` is wrapped; any other sequence is
+    passed through as a tuple, preserving declared order.
+    """
+    if isinstance(restart, (StageRestart, SharedRestart)):
+        return (restart,)
+    return tuple(restart)
+
+
+@dataclass(frozen=True)
 class Component:
     """One deployable layer: its secrets, units, and optional database.
 
     Environment values are not a field here - they live on the ``TemplatedUnit``
     that consumes them. ``stages`` of ``None`` means "use the spec's stages".
+    ``check`` validates the staged candidate files before install; ``restart``
+    cycles services after install. Both default to today's behavior.
     """
 
     name: str
@@ -126,6 +183,8 @@ class Component:
     units: Sequence[Unit] = ()
     db: "Db | None" = None
     stages: AbstractSet[Stages] | None = None
+    check: Sequence[Check] = ()
+    restart: RestartItem | Sequence[RestartItem] = ()
 
 
 @dataclass(frozen=True)
